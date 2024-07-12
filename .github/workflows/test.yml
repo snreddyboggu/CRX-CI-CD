@@ -1,0 +1,45 @@
+name: reactproject
+#on: [push,workflow_dispatch]
+on: 
+  workflow_call: 
+
+# this is event is triggred both when commit ro manual trigger 
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: set up node envirionment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+      - name: install nodeJs dependencies
+        run: npm ci
+
+      - name: check for formating errors
+        run: npm run format
+
+      - name: check for ES lint errors
+        run: npm run lint
+
+      - name: check for type errors
+        run: npm run typecheck
+
+      - name: build the project 
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+           name: build 
+           path: |
+             dist
+             package.json
+      
+
+
+
+          
+      
+      
+          
