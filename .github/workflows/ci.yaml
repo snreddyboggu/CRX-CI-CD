@@ -1,8 +1,53 @@
-name: CI
+yaml
+name: Deploy Node.js App to EKS  # Workflow name
+
 on:
-    pull_request: 
-        branches: [main]
+  push:
+    branches:
+      - "feature"  # Trigger on push to main branch
+  pull_request:
+    branches:
+      - "feature"  # Trigger on pull requests to main branch
+
 jobs:
-    run-tests:
-        uses: ./.github/workflows/test.yml
-        
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production  # Specify the staging environment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # Checkout the code from the repository
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.29.0'  # Specify the kubectl version
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # AWS Secret Access Key
+          aws-region: us-west-2  # AWS Region
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2  # Login to Amazon ECR
+
+      - name: Get commit hash
+        id: get-commit-hash
+        run: echo "::set-output name=commit-hash::$(git rev-parse --short HEAD)"
+
+      - name: Get timestamp
+        id: get-timestamp
+        run: echo "::set-output name=timestamp::$(date +'%Y-%m-%d-%H-%M')"
+
+      - name: Build, tag, and push the image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: server  # Hardcoded repository name
+          IMAGE_TAG: ${{ steps.get-commit-hash.outputs.commit-hash }}-${{ steps.get-timestamp.outputs.timestamp }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
