@@ -12,7 +12,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production  # Specify the production environment
+    environment: staging  # Specify the production environment
 
     steps:
       - name: Checkout code
