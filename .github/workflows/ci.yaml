@@ -1,5 +1,5 @@
 
-name: Deploy Node.js App to EKS  # Workflow name
+name: Deploy Node.js App to EKS  # Workflow namef
 
 on:
   push:
