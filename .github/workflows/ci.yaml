@@ -4,15 +4,15 @@ name: Deploy Node.js App to EKS  # Workflow name
 on:
   push:
     branches:
-      - "feature"  # Trigger on push to main branch
+      - "feature"  # Trigger on push to feature branch
   pull_request:
     branches:
-      - "feature"  # Trigger on pull requests to main branch
+      - "feature"  # Trigger on pull requests to feature branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production  # Specify the staging environment
+    environment: production  # Specify the production environment
 
     steps:
       - name: Checkout code
@@ -28,7 +28,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # AWS Secret Access Key
-          aws-region: us-west-2  # AWS Region
+          aws-region: us-east-1  # AWS Region
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -36,18 +36,18 @@ jobs:
 
       - name: Get commit hash
         id: get-commit-hash
-        run: echo "::set-output name=commit-hash::$(git rev-parse --short HEAD)"
+        run: echo "commit-hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Get timestamp
         id: get-timestamp
-        run: echo "::set-output name=timestamp::$(date +'%Y-%m-%d-%H-%M')"
+        run: echo "timestamp=$(date +'%Y-%m-%d-%H-%M')" >> $GITHUB_ENV
 
       - name: Build, tag, and push the image to Amazon ECR
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: server  # Hardcoded repository name
-          IMAGE_TAG: ${{ steps.get-commit-hash.outputs.commit-hash }}-${{ steps.get-timestamp.outputs.timestamp }}
+          IMAGE_TAG: ${{ env.commit-hash }}-${{ env.timestamp }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
