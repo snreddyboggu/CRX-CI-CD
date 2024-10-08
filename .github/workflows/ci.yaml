@@ -11,7 +11,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: staging  # Specify the production environment
+    environment: staging  # Specify the environment
 
     steps:
       - name: Checkout code
@@ -22,12 +22,22 @@ jobs:
         with:
           version: 'v1.29.0'  # Specify the kubectl version
 
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # AWS Secret Access Key
           aws-region: ap-south-1  # AWS Region
+
+      - name: Set up EKS kubeconfig
+        run: |
+          aws eks update-kubeconfig --name eks-dev-cluster --region ap-south-1
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -45,8 +55,17 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: server  # Hardcoded repository name
+          ECR_REPOSITORY: server  # Your ECR repository name
           IMAGE_TAG: staging-${{ env.commit-hash }}-${{ env.timestamp }}  # Prefix with 'staging'
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Update Helm values.yaml with the latest image
+        run: |
+          IMAGE_TAG=${{ env.commit-hash }}-${{ env.timestamp }}  # Get the latest image tag
+          sed -i "s|image: .*|image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:staging-${IMAGE_TAG}|" helm-chart-server/values.yaml
+
+      - name: Deploy to EKS using Helm
+        run: |
+          helm upgrade --install testing helm-chart-server --values helm-chart-server/values.yaml
