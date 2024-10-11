@@ -3,10 +3,10 @@ name: Deploy Node.js App to EKS  # Workflow name
 on:
   push:
     branches:
-      - "main1"  # Trigger on push to main1 branch
+      - "main"  # Trigger on push to main branch
   pull_request:
     branches:
-      - "main1"  # Trigger on pull requests to main1 branch
+      - "main"  # Trigger on pull requests to main branch
 
 jobs:
   deploy:
@@ -27,11 +27,11 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # AWS Secret Access Key
-          aws-region: ap-south-1  # AWS Region
+          aws-region: us-west-2  # AWS Region
 
       - name: Set up EKS kubeconfig
         run: |
-          aws eks update-kubeconfig --name eks-dev-cluster --region ap-south-1
+          aws eks update-kubeconfig --name CRX-DEV --region us-west-2
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -66,4 +66,4 @@ jobs:
 
       - name: Deploy to EKS using Helm
         run: |
-          helm upgrade --install testing helm-chart-server --values helm-chart-server/values.yaml
+          helm upgrade --install testing helm-chart-server --values helm-chart-server/values.yaml --namespace crx-dev  # Specify the namespace
