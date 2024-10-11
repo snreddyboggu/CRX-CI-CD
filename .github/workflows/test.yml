@@ -48,30 +48,21 @@ jobs:
       - name: Build, tag, and push the image to Amazon ECR
         id: build-image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}  # Amazon ECR registry
-          ECR_REPOSITORY: server  # Your repository name in Amazon ECR
-          COMMIT_HASH: ${{ env.COMMIT_HASH }}  # Commit hash
-          TIMESTAMP: ${{ env.TIMESTAMP }}      # Timestamp
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: server  # Your ECR repository name
+          IMAGE_TAG: staging-${{ env.COMMIT_HASH }}-${{ env.TIMESTAMP }}  # Prefix with 'staging'
         run: |
-          # Define the image tag without the extra colon (no colons in tag other than the one separating the repository and tag)
-          IMAGE_TAG=staging-${COMMIT_HASH}-${TIMESTAMP}
-          
-          # Define the full image name
-          FULL_IMAGE_NAME=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
-          
-          # Build and tag the Docker image
-          docker build -t ${FULL_IMAGE_NAME} .
-
-          # Push the image to ECR
-          docker push ${FULL_IMAGE_NAME}
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Update Helm values.yaml with the latest image
         run: |
           IMAGE_TAG=staging-${{ env.COMMIT_HASH }}-${{ env.TIMESTAMP }}
           FULL_IMAGE_NAME=${{ steps.login-ecr.outputs.registry }}/server:${IMAGE_TAG}
           
-          # Update the repository and tag in values.yaml
+          # Replace repository and tag in values.yaml
           sed -i "s|repository: .*|repository: ${FULL_IMAGE_NAME}|" helm-chart-server/values.yaml
+          sed -i "s|tag: .*|tag: \"${IMAGE_TAG}\"|" helm-chart-server/values.yaml
 
       - name: Deploy to EKS using Helm
         run: |
