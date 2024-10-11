@@ -58,9 +58,9 @@ jobs:
       - name: Update Helm values.yaml with the latest image
         run: |
           IMAGE_TAG=staging-${{ env.COMMIT_HASH }}-${{ env.TIMESTAMP }}
-          FULL_IMAGE_NAME=${{ steps.login-ecr.outputs.registry }}/server:${IMAGE_TAG}
+          FULL_IMAGE_NAME=${{ steps.login-ecr.outputs.registry }}/server
           
-          # Replace repository and tag in values.yaml
+          # Update only the repository and tag separately
           sed -i "s|repository: .*|repository: ${FULL_IMAGE_NAME}|" helm-chart-server/values.yaml
           sed -i "s|tag: .*|tag: \"${IMAGE_TAG}\"|" helm-chart-server/values.yaml
 
