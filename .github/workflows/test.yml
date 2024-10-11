@@ -3,10 +3,10 @@ name: Deploy Node.js App to EKS  # Workflow name
 on:
   push:
     branches:
-      - "feature"  # Trigger on push to feature branch
+      - "main1"  # Trigger on push to feature branch
   pull_request:
     branches:
-      - "feature"  # Trigger on pull requests to feature branch
+      - "main1"  # Trigger on pull requests to feature branch
 
 jobs:
   deploy:
