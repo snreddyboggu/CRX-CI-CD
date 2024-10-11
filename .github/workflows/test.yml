@@ -53,7 +53,7 @@ jobs:
           COMMIT_HASH: ${{ env.COMMIT_HASH }}  # Commit hash
           TIMESTAMP: ${{ env.TIMESTAMP }}      # Timestamp
         run: |
-          # Define the image tag
+          # Define the image tag without the extra colon (no colons in tag other than the one separating the repository and tag)
           IMAGE_TAG=staging-${COMMIT_HASH}-${TIMESTAMP}
           
           # Define the full image name
