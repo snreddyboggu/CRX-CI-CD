@@ -3,10 +3,10 @@ name: Deploy Node.js App to EKS  # Workflow name
 on:
   push:
     branches:
-      - "feature"  # Trigger on push to feature branch
+      - "feature/*"  # Trigger on push to feature branches
   pull_request:
     branches:
-      - "feature"  # Trigger on pull requests to feature branch
+      - "feature/*"  # Trigger on pull requests to feature branches
 
 jobs:
   deploy:
@@ -21,19 +21,6 @@ jobs:
         uses: azure/setup-kubectl@v4
         with:
           version: 'v1.29.0'  # Specify the kubectl version
-
-      - name: Install or Update AWS CLI
-        run: |
-          if command -v aws >/dev/null 2>&1; then
-            echo "AWS CLI is already installed. Updating..."
-            sudo aws --version  # Ensure the command is recognized before updating
-            aws --update
-          else
-            echo "Installing AWS CLI..."
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            sudo ./aws/install
-          fi
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -59,19 +46,18 @@ jobs:
         run: echo "timestamp=$(date +'%Y-%m-%d-%H-%M')" >> $GITHUB_ENV
 
       - name: Build, tag, and push the image to Amazon ECR
-        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: server  # Your ECR repository name
-          IMAGE_TAG: staging-${{ env.commit-hash }}-${{ env.timestamp }}  # Prefix with 'staging'
+          IMAGE_TAG: staging-${{ steps.get-commit-hash.outputs.commit-hash }}-${{ steps.get-timestamp.outputs.timestamp }}  # Prefix with 'staging'
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Update Helm values.yaml with the latest image
         run: |
-          IMAGE_TAG=${{ env.commit-hash }}-${{ env.timestamp }}  # Get the latest image tag
-          sed -i "s|image: .*|image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:staging-${IMAGE_TAG}|" helm-chart-server/values.yaml
+          IMAGE_TAG=staging-${{ steps.get-commit-hash.outputs.commit-hash }}-${{ steps.get-timestamp.outputs.timestamp }}
+          sed -i "s|image: .*|image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}|" helm-chart-server/values.yaml
 
       - name: Deploy to EKS using Helm
         run: |
